@@ -7,4 +7,8 @@ export default defineConfig({
     pedantic: "off",
   },
   plugins: ["import", "react"],
+  rules: {
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+  },
 });
