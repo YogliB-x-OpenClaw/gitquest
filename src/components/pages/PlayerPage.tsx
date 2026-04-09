@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import { fetchCommits, analyzeCommits } from "@/lib/github";
 import { musicEngine } from "@/lib/music-engine";
-import { PlayerTemplate } from "@/components/templates/PlayerTemplate/PlayerTemplate";
+import { PlayerTemplate } from "@/components/templates";
 import type { MusicOverrides } from "@/types";
 
 export function PlayerPage() {

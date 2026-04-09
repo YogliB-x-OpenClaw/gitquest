@@ -1,4 +1,4 @@
-import { ThemeToggle } from "@/components/organisms/ThemeToggle/ThemeToggle";
+import { ThemeToggle } from "@/components/organisms";
 
 interface PlayerHeaderProps {
   owner: string;

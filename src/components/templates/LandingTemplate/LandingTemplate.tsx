@@ -1,5 +1,4 @@
-import { LandingHeader, PopularReposGrid, RepoInputBar } from "@/components/organisms";
-import { ThemeToggle } from "@/components/organisms/ThemeToggle/ThemeToggle";
+import { LandingHeader, PopularReposGrid, RepoInputBar, ThemeToggle } from "@/components/organisms";
 
 interface LandingTemplateProps {
   error: string | null;

@@ -1,10 +1,12 @@
 import type { Analysis, Commit, MusicOverrides } from "@/types";
-import { PlayerHeader } from "@/components/organisms/PlayerHeader/PlayerHeader";
-import { WaveformViz } from "@/components/organisms/WaveformViz/WaveformViz";
-import { PlaybackControls } from "@/components/organisms/PlaybackControls/PlaybackControls";
-import { FromYourCodePanel } from "@/components/organisms/FromYourCodePanel/FromYourCodePanel";
-import { TuneMusicPanel } from "@/components/organisms/TuneMusicPanel/TuneMusicPanel";
-import { CommitFeed } from "@/components/organisms/CommitFeed/CommitFeed";
+import {
+  PlayerHeader,
+  WaveformViz,
+  PlaybackControls,
+  FromYourCodePanel,
+  TuneMusicPanel,
+  CommitFeed,
+} from "@/components/organisms";
 
 interface PlayerTemplateProps {
   owner: string;
