@@ -143,9 +143,9 @@ class MusicEngine {
 
     this.masterVol = new Tone.Volume(Tone.gainToDb(this.volume)).connect(limiter);
 
-    const melody = buildMelody(analysis, notePool, rng, style);
-    const bassLine = buildBassLine(analysis, root, scale, octave - 1, rng);
-    const rhythm = buildRhythm(analysis, style, rng);
+    const melody = buildMelody(analysis, notePool);
+    const bassLine = buildBassLine(analysis, root, scale, octave - 1);
+    const rhythm = buildRhythm(analysis, style);
 
     const melodySynth = createSynth(config.primarySynth, style);
     melodySynth.connect(this.masterVol);
@@ -282,7 +282,7 @@ function buildNotePool(
   return notes;
 }
 
-function buildMelody(analysis: Analysis, notePool: string[], rng: SeededRNG, style: Style) {
+function buildMelody(analysis: Analysis, notePool: string[]) {
   const { music } = analysis;
   const length = 16;
   const melody = [];
@@ -304,13 +304,7 @@ function buildMelody(analysis: Analysis, notePool: string[], rng: SeededRNG, sty
   return melody;
 }
 
-function buildBassLine(
-  analysis: Analysis,
-  root: string,
-  scale: number[],
-  octave: number,
-  rng: SeededRNG,
-) {
+function buildBassLine(analysis: Analysis, root: string, scale: number[], octave: number) {
   const rootIdx = ROOTS.indexOf(root);
   const bassNotes = scale.slice(0, 4).map((interval) => {
     const idx = (rootIdx + interval) % 12;
@@ -342,7 +336,7 @@ function buildChords(root: string, scale: number[], octave: number, rng: SeededR
   return [...chords, ...chords];
 }
 
-function buildRhythm(analysis: Analysis, style: Style, rng: SeededRNG): number[] {
+function buildRhythm(analysis: Analysis, style: Style): number[] {
   const patterns: Record<Style, number[]> = {
     dnd: [1, 0, 0, 0.5, 1, 0, 0.3, 0, 1, 0, 0, 0.5, 1, 0, 0.3, 0],
     scifi: [1, 0, 0.3, 0, 0.8, 0, 0.3, 0.2, 1, 0, 0.3, 0, 0.8, 0.2, 0.5, 0],
