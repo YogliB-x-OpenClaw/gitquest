@@ -1,5 +1,5 @@
 import * as Tone from "tone";
-import type { Style, Analysis } from "@/types";
+import type { Analysis, MusicOverrides } from "@/types";
 
 // ─── Music Theory Constants ───────────────────────────────────────────────────
 
@@ -14,60 +14,11 @@ const SCALES: Record<string, number[]> = {
 
 const ROOTS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
-interface StyleConfig {
-  loadingIcon: string;
-  loadingTitle: string;
-  primarySynth: string;
-  bassSynth: string;
-  padSynth: string;
-  arpSynth: string;
-  reverbWet: number;
-  delayWet: number;
-  tempoMult: number;
-  scalePreference: string[];
-  octaveRange: [number, number];
-}
-
-const STYLE_CONFIGS: Record<Style, StyleConfig> = {
-  dnd: {
-    loadingIcon: "⚔",
-    loadingTitle: "Summoning the Chronicles...",
-    primarySynth: "pluck",
-    bassSynth: "membrane",
-    padSynth: "organ",
-    arpSynth: "pluck",
-    reverbWet: 0.5,
-    delayWet: 0.1,
-    tempoMult: 0.9,
-    scalePreference: ["major", "minor", "dorian"],
-    octaveRange: [3, 5],
-  },
-  scifi: {
-    loadingIcon: "🚀",
-    loadingTitle: "Initializing Mission Parameters...",
-    primarySynth: "synth",
-    bassSynth: "fm",
-    padSynth: "am",
-    arpSynth: "synth",
-    reverbWet: 0.3,
-    delayWet: 0.4,
-    tempoMult: 1.1,
-    scalePreference: ["dorian", "phrygian", "minor"],
-    octaveRange: [3, 6],
-  },
-  horror: {
-    loadingIcon: "💀",
-    loadingTitle: "Awakening the Darkness...",
-    primarySynth: "am",
-    bassSynth: "fm",
-    padSynth: "am",
-    arpSynth: "am",
-    reverbWet: 0.8,
-    delayWet: 0.3,
-    tempoMult: 0.7,
-    scalePreference: ["diminished", "phrygian", "minor"],
-    octaveRange: [2, 4],
-  },
+const ENGINE_CONFIG = {
+  reverbDecay: 2.5,
+  reverbWet: 0.35,
+  delayWet: 0.15,
+  octaveRange: [3, 5] as [number, number],
 };
 
 // ─── Seeded RNG ───────────────────────────────────────────────────────────────
@@ -94,7 +45,6 @@ class SeededRNG {
 class MusicEngine {
   isPlaying = false;
   volume = 0.6;
-  style: Style = "dnd";
   analysis: Analysis | null = null;
   private parts: Tone.Sequence[] = [];
   private synths: (
@@ -109,51 +59,55 @@ class MusicEngine {
   private masterVol: Tone.Volume | null = null;
   initialized = false;
 
-  async init(style: Style, analysis: Analysis) {
-    this.style = style;
+  async init(analysis: Analysis, overrides?: MusicOverrides) {
     this.analysis = analysis;
     this.dispose();
 
-    const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.dnd;
     const music = analysis.music;
-    const rng = new SeededRNG(analysis.hashSeed);
+
+    const effectiveBpm = overrides?.bpm ?? music.bpm;
+    const effectiveScale = overrides?.scale ?? music.scale;
+    const effectiveVoices = overrides?.voices ?? music.voices;
+    const effectiveEnergy = overrides?.energy ?? music.energy;
+    const effectiveReverb = overrides?.reverb ?? ENGINE_CONFIG.reverbWet;
 
     const rootIdx = analysis.hashSeed % 12;
     const root = ROOTS[rootIdx];
-    const scaleName = rng.pick(config.scalePreference);
-    const scale = SCALES[scaleName];
-    const octave = config.octaveRange[0] + 1;
+    const scale = SCALES[effectiveScale] ?? SCALES.major;
+    const octave = ENGINE_CONFIG.octaveRange[0] + 1;
 
-    const notePool = buildNotePool(root, scale, octave, config.octaveRange);
+    const notePool = buildNotePool(root, scale, octave, ENGINE_CONFIG.octaveRange);
 
-    const bpm = Math.round(music.bpm * config.tempoMult);
-    Tone.getTransport().bpm.value = bpm;
+    Tone.getTransport().bpm.value = effectiveBpm;
 
     const reverb = new Tone.Reverb({
-      decay: style === "horror" ? 6 : 2.5,
-      wet: config.reverbWet,
+      decay: ENGINE_CONFIG.reverbDecay,
+      wet: effectiveReverb,
     }).toDestination();
     const delay = new Tone.FeedbackDelay({
       delayTime: "8n",
       feedback: 0.2,
-      wet: config.delayWet,
+      wet: ENGINE_CONFIG.delayWet,
     }).connect(reverb);
     const limiter = new Tone.Limiter(-3).toDestination();
     this.effects = { reverb, delay, limiter };
 
     this.masterVol = new Tone.Volume(Tone.gainToDb(this.volume)).connect(limiter);
 
-    const melody = buildMelody(analysis, notePool);
-    const bassLine = buildBassLine(analysis, root, scale, octave - 1);
-    const rhythm = buildRhythm(analysis, style);
+    const melody = buildMelody(analysis, notePool, effectiveEnergy);
+    const bassLine = buildBassLine(root, scale, octave - 1);
+    const rhythm = buildRhythm();
 
-    const melodySynth = createSynth(config.primarySynth, style);
+    const melodySynth = new Tone.Synth({
+      oscillator: { type: "triangle" },
+      envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 1.2 },
+    });
     melodySynth.connect(this.masterVol);
-    this.synths.push(melodySynth as any);
+    this.synths.push(melodySynth);
 
     const melodyPart = new Tone.Sequence(
       (time, note: any) => {
-        if (note) (melodySynth as any).triggerAttackRelease(note.pitch, note.dur, time, note.vel);
+        if (note) melodySynth.triggerAttackRelease(note.pitch, note.dur, time, note.vel);
       },
       melody,
       "8n",
@@ -161,15 +115,19 @@ class MusicEngine {
     melodyPart.loop = true;
     this.parts.push(melodyPart);
 
-    if (music.voices >= 2) {
-      const bassSynth = createSynth(config.bassSynth, style, true);
+    if (effectiveVoices >= 2) {
+      const bassSynth = new Tone.FMSynth({
+        harmonicity: 2,
+        modulationIndex: 5,
+        envelope: { attack: 0.02, decay: 0.3, sustain: 0.4, release: 1.2 },
+        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 },
+      });
       bassSynth.connect(this.masterVol);
-      this.synths.push(bassSynth as any);
+      this.synths.push(bassSynth);
 
       const bassPart = new Tone.Sequence(
         (time, note: any) => {
-          if (note)
-            (bassSynth as any).triggerAttackRelease(note.pitch, note.dur, time, note.vel * 0.7);
+          if (note) bassSynth.triggerAttackRelease(note.pitch, note.dur, time, note.vel * 0.7);
         },
         bassLine,
         "4n",
@@ -178,18 +136,19 @@ class MusicEngine {
       this.parts.push(bassPart);
     }
 
-    if (music.voices >= 3 || style === "horror") {
-      const padSynth = createPad(style);
+    if (effectiveVoices >= 3) {
+      const padSynth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.4, decay: 0.5, sustain: 0.8, release: 2 },
+      });
       padSynth.connect(reverb);
       this.synths.push(padSynth as any);
 
-      const chords = buildChords(root, scale, octave, rng, style);
+      const chords = buildChords(root, scale, octave);
       const padPart = new Tone.Sequence(
         (time, chord: any) => {
           if (chord)
-            chord.forEach((n: string) =>
-              (padSynth as any).triggerAttackRelease(n, "2n", time, 0.3),
-            );
+            chord.forEach((n: string) => padSynth.triggerAttackRelease(n, "2n", time, 0.3));
         },
         chords,
         "2n",
@@ -198,8 +157,8 @@ class MusicEngine {
       this.parts.push(padPart);
     }
 
-    if (style !== "horror" || music.energy > 0.5) {
-      const percPart = buildPercussion(rhythm, style, this.masterVol);
+    if (effectiveVoices >= 4) {
+      const percPart = buildPercussion(rhythm, this.masterVol);
       if (percPart) this.parts.push(percPart);
     }
 
@@ -282,29 +241,29 @@ function buildNotePool(
   return notes;
 }
 
-function buildMelody(analysis: Analysis, notePool: string[]) {
-  const { music } = analysis;
+function buildMelody(analysis: Analysis, notePool: string[], energy: number) {
   const length = 16;
   const melody = [];
-  const contourSeed = analysis.hashSeed;
-  const rng2 = new SeededRNG(contourSeed);
+  const rng = new SeededRNG(analysis.hashSeed);
 
   for (let i = 0; i < length; i++) {
-    if (rng2.next() < analysis.fixRatio * 0.3) {
+    if (rng.next() < analysis.fixRatio * 0.3) {
       melody.push(null);
       continue;
     }
-    const noteIdx = Math.floor(Math.abs(Math.sin(i * 0.7 + contourSeed * 0.001)) * notePool.length);
+    const noteIdx = Math.floor(
+      Math.abs(Math.sin(i * 0.7 + analysis.hashSeed * 0.001)) * notePool.length,
+    );
     const pitch = notePool[noteIdx % notePool.length];
-    const durOptions = music.energy > 0.6 ? ["16n", "8n", "8n", "4n"] : ["8n", "4n", "4n", "2n"];
-    const dur = rng2.pick(durOptions);
-    const vel = 0.4 + rng2.next() * 0.5;
+    const durOptions = energy > 0.6 ? ["16n", "8n", "8n", "4n"] : ["8n", "4n", "4n", "2n"];
+    const dur = rng.pick(durOptions);
+    const vel = 0.4 + rng.next() * 0.5;
     melody.push({ pitch, dur, vel });
   }
   return melody;
 }
 
-function buildBassLine(analysis: Analysis, root: string, scale: number[], octave: number) {
+function buildBassLine(root: string, scale: number[], octave: number) {
   const rootIdx = ROOTS.indexOf(root);
   const bassNotes = scale.slice(0, 4).map((interval) => {
     const idx = (rootIdx + interval) % 12;
@@ -319,9 +278,9 @@ function buildBassLine(analysis: Analysis, root: string, scale: number[], octave
   return pattern;
 }
 
-function buildChords(root: string, scale: number[], octave: number, rng: SeededRNG, style: Style) {
+function buildChords(root: string, scale: number[], octave: number) {
   const rootIdx = ROOTS.indexOf(root);
-  const chordDegrees = style === "horror" ? [0, 1, 6] : [0, 3, 4, 5];
+  const chordDegrees = [0, 3, 4, 5];
   const chords = chordDegrees.map((degree) => {
     const intervals = [
       scale[degree],
@@ -336,24 +295,15 @@ function buildChords(root: string, scale: number[], octave: number, rng: SeededR
   return [...chords, ...chords];
 }
 
-function buildRhythm(analysis: Analysis, style: Style): number[] {
-  const patterns: Record<Style, number[]> = {
-    dnd: [1, 0, 0, 0.5, 1, 0, 0.3, 0, 1, 0, 0, 0.5, 1, 0, 0.3, 0],
-    scifi: [1, 0, 0.3, 0, 0.8, 0, 0.3, 0.2, 1, 0, 0.3, 0, 0.8, 0.2, 0.5, 0],
-    horror: [1, 0, 0, 0, 0, 0, 0, 0, 0.6, 0, 0, 0, 0, 0, 0, 0],
-  };
-  return patterns[style] || patterns.dnd;
+function buildRhythm(): number[] {
+  return [1, 0, 0.5, 0, 1, 0, 0.5, 0.3, 1, 0, 0.5, 0, 1, 0.3, 0.5, 0];
 }
 
-function buildPercussion(
-  rhythm: number[],
-  style: Style,
-  destination: Tone.Volume,
-): Tone.Sequence | null {
+function buildPercussion(rhythm: number[], destination: Tone.Volume): Tone.Sequence | null {
   try {
     const kick = new Tone.MembraneSynth({
       pitchDecay: 0.05,
-      octaves: style === "horror" ? 3 : 6,
+      octaves: 6,
       envelope: { attack: 0.001, decay: 0.3, sustain: 0, release: 0.1 },
     }).connect(destination);
 
@@ -369,58 +319,6 @@ function buildPercussion(
   } catch {
     return null;
   }
-}
-
-function createSynth(type: string, style: Style, isBass = false) {
-  const baseEnv = { attack: 0.02, decay: 0.3, sustain: 0.4, release: 1.2 };
-  switch (type) {
-    case "pluck":
-      return new Tone.PluckSynth({ attackNoise: 1, dampening: 4000, resonance: 0.7 });
-    case "fm":
-      return new Tone.FMSynth({
-        harmonicity: isBass ? 2 : 3,
-        modulationIndex: style === "scifi" ? 10 : 5,
-        envelope: baseEnv,
-        modulationEnvelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.5 },
-      });
-    case "am":
-      return new Tone.AMSynth({
-        harmonicity: style === "horror" ? 1.5 : 2,
-        envelope: { ...baseEnv, attack: style === "horror" ? 0.5 : 0.02 },
-      });
-    case "organ":
-      return new Tone.Synth({
-        oscillator: { type: "sine" },
-        envelope: { attack: 0.05, decay: 0.1, sustain: 0.9, release: 0.5 },
-      });
-    default:
-      return new Tone.Synth({
-        oscillator: { type: style === "scifi" ? "sawtooth" : "triangle" },
-        envelope: baseEnv,
-      });
-  }
-}
-
-function createPad(style: Style) {
-  if (style === "horror") {
-    return new Tone.AMSynth({
-      harmonicity: 1.5,
-      oscillator: { type: "sine" },
-      envelope: { attack: 2, decay: 1, sustain: 0.8, release: 3 },
-      modulation: { type: "sine" },
-      modulationEnvelope: { attack: 2, decay: 1, sustain: 0.8, release: 3 },
-    });
-  }
-  if (style === "scifi") {
-    return new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: "sine" },
-      envelope: { attack: 0.5, decay: 0.5, sustain: 0.8, release: 2 },
-    });
-  }
-  return new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: "sine" },
-    envelope: { attack: 0.3, decay: 0.5, sustain: 0.7, release: 1.5 },
-  });
 }
 
 export const musicEngine = new MusicEngine();

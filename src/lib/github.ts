@@ -1,5 +1,5 @@
 import { storage } from "./storage";
-import type { Commit, Analysis, PopularRepo, RateLimitStatus } from "@/types";
+import type { Commit, Analysis, PopularRepo, RateLimitStatus, Scale } from "@/types";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -181,24 +181,54 @@ export function analyzeCommits(commits: Commit[]): Analysis {
 
   const hashSeed = commits.slice(0, 5).reduce((acc, c) => acc ^ parseInt(c.sha.slice(0, 8), 16), 0);
 
+  const fixRatio = fixCount / totalCommits;
+  const refactorRatio = refactorCount / totalCommits;
+  const bpm = Math.round(60 + Math.min(80, commitsPerDay * 8));
+  const energy = Math.min(1, commitsPerDay / 10);
+
+  let scale: Scale;
+  let scaleReason: string;
+  if (fixRatio > 0.4) {
+    scale = "minor";
+    scaleReason = `${Math.round(fixRatio * 100)}% bug-fix commits create a minor, introspective mood`;
+  } else if (refactorRatio > 0.3) {
+    scale = "dorian";
+    scaleReason = `Heavy refactoring (${Math.round(refactorRatio * 100)}%) suggests the evolving Dorian scale`;
+  } else if (peakHour < 6 || peakHour > 22) {
+    scale = "phrygian";
+    scaleReason = `Late-night peak (${peakHour}:00) brings a mysterious Phrygian character`;
+  } else if (commitsPerDay > 5) {
+    scale = "pentatonic";
+    scaleReason = `High velocity (${Math.round(commitsPerDay * 10) / 10}/day) flows best in open Pentatonic`;
+  } else {
+    scale = "major";
+    scaleReason = `Steady, balanced development earns a bright Major scale`;
+  }
+
+  const bpmReason = `${totalCommits} commits over ${Math.round(daySpan)} days → ${bpm} BPM`;
+  const energyReason = `${Math.round(commitsPerDay * 10) / 10} commits/day → ${Math.round(energy * 100)}% energy`;
+
   return {
     totalCommits,
     authors,
     authorCount: authors.length,
     peakHour,
     avgMsgLen,
-    fixRatio: fixCount / totalCommits,
+    fixRatio,
     featRatio: featCount / totalCommits,
-    refactorRatio: refactorCount / totalCommits,
+    refactorRatio,
     commitsPerDay,
     daySpan,
     hashSeed,
+    bpmReason,
+    scaleReason,
+    energyReason,
     music: {
-      bpm: Math.round(60 + Math.min(80, commitsPerDay * 8)),
+      bpm,
       voices: Math.min(4, Math.max(1, authors.length)),
-      mode: peakHour >= 6 && peakHour <= 18 ? "major" : "minor",
+      scale,
       complexity: Math.min(1, ((fixCount + refactorCount) / Math.max(1, totalCommits)) * 3),
-      energy: Math.min(1, commitsPerDay / 10),
+      energy,
     },
   };
 }

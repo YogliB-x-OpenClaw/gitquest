@@ -1,15 +1,16 @@
-import type { Commit, Analysis, Style } from "@/types";
+import type { Commit, Analysis, MusicOverrides } from "@/types";
 
 export interface RepoSlice {
   commits: Commit[];
   analysis: Analysis | null;
-  currentStyle: Style;
+  overrides: MusicOverrides;
   urlError: string | null;
   isLoading: boolean;
   loadError: string | null;
   setCommits: (commits: Commit[]) => void;
   setAnalysis: (analysis: Analysis) => void;
-  setCurrentStyle: (style: Style) => void;
+  setOverrides: (overrides: MusicOverrides) => void;
+  resetOverrides: () => void;
   setUrlError: (msg: string | null) => void;
   setIsLoading: (val: boolean) => void;
   setLoadError: (msg: string | null) => void;
@@ -21,13 +22,14 @@ export function createRepoSlice(
   return {
     commits: [],
     analysis: null,
-    currentStyle: "dnd",
+    overrides: {},
     urlError: null,
     isLoading: false,
     loadError: null,
     setCommits: (commits) => set(() => ({ commits })),
     setAnalysis: (analysis) => set(() => ({ analysis })),
-    setCurrentStyle: (style) => set(() => ({ currentStyle: style })),
+    setOverrides: (overrides) => set(() => ({ overrides })),
+    resetOverrides: () => set(() => ({ overrides: {} })),
     setUrlError: (msg) => set(() => ({ urlError: msg })),
     setIsLoading: (val) => set(() => ({ isLoading: val })),
     setLoadError: (msg) => set(() => ({ loadError: msg })),

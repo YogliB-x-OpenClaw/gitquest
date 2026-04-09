@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=Orbitron:wght@400;600;700;900&family=Creepster&family=Special+Elite&family=Share+Tech+Mono&family=MedievalSharp&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
 
@@ -22,10 +22,16 @@
       (function () {
         try {
           var settings = JSON.parse(localStorage.getItem("gitquest:settings") || "{}");
-          var theme = settings.lastStyle || "dnd";
-          document.documentElement.setAttribute("data-theme", theme);
+          var pref = settings.colorTheme;
+          var isDark =
+            pref === "dark" ||
+            (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.setAttribute(
+            "data-theme",
+            isDark ? "gitquest-dark" : "gitquest-light",
+          );
         } catch (e) {
-          document.documentElement.setAttribute("data-theme", "dnd");
+          document.documentElement.setAttribute("data-theme", "gitquest-light");
         }
       })();
     </script>

@@ -1,28 +1,24 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useStore } from "@/store";
 import { fetchCommits, analyzeCommits } from "@/lib/github";
 import { musicEngine } from "@/lib/music-engine";
-import type { Style } from "@/types";
-import * as styles from "./PlayerPage.css";
-
-const STYLE_LABELS: Record<Style, string> = {
-  dnd: "Fantasy",
-  scifi: "Sci-Fi",
-  horror: "Dark",
-};
+import { PlayerTemplate } from "@/components/templates";
+import type { MusicOverrides } from "@/types";
 
 export function PlayerPage() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const navigate = useNavigate();
 
   const analysis = useStore((s) => s.analysis);
-  const currentStyle = useStore((s) => s.currentStyle);
+  const commits = useStore((s) => s.commits);
+  const overrides = useStore((s) => s.overrides);
   const isLoading = useStore((s) => s.isLoading);
   const loadError = useStore((s) => s.loadError);
   const setCommits = useStore((s) => s.setCommits);
   const setAnalysis = useStore((s) => s.setAnalysis);
-  const setCurrentStyle = useStore((s) => s.setCurrentStyle);
+  const setOverrides = useStore((s) => s.setOverrides);
+  const resetOverrides = useStore((s) => s.resetOverrides);
   const setIsLoading = useStore((s) => s.setIsLoading);
   const setLoadError = useStore((s) => s.setLoadError);
 
@@ -35,6 +31,8 @@ export function PlayerPage() {
 
   const githubToken = useStore((s) => s.githubToken);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (!owner || !repo) return;
     let cancelled = false;
@@ -43,7 +41,7 @@ export function PlayerPage() {
       setIsLoading(true);
       setLoadError(null);
       setCommits([]);
-      setAnalysis(null);
+      setAnalysis(null as any);
       setMusicStarted(false);
       setIsPlaying(false);
       musicEngine.dispose();
@@ -54,7 +52,7 @@ export function PlayerPage() {
         const analyzed = analyzeCommits(fetched);
         setCommits(fetched);
         setAnalysis(analyzed);
-        await musicEngine.init(currentStyle, analyzed);
+        await musicEngine.init(analyzed);
       } catch (e) {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : "Failed to load repository");
       } finally {
@@ -75,22 +73,6 @@ export function PlayerPage() {
     };
   }, []);
 
-  const handleStyleChange = async (style: Style) => {
-    setCurrentStyle(style);
-    if (analysis) {
-      const wasPlaying = isPlaying;
-      musicEngine.dispose();
-      setIsPlaying(false);
-      setMusicStarted(false);
-      await musicEngine.init(style, analysis);
-      if (wasPlaying) {
-        musicEngine.play();
-        setIsPlaying(true);
-        setMusicStarted(true);
-      }
-    }
-  };
-
   const handlePlayPause = () => {
     if (!musicStarted) {
       musicEngine.play();
@@ -105,105 +87,83 @@ export function PlayerPage() {
     }
   };
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = parseFloat(e.target.value);
+  const handleVolumeChange = (v: number) => {
     setVolume(v);
     musicEngine.setVolume(v);
   };
 
+  const handleOverrideChange = (newOverrides: MusicOverrides) => {
+    setOverrides(newOverrides);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (!analysis) return;
+      const wasPlaying = musicEngine.isPlaying;
+      musicEngine.dispose();
+      setIsPlaying(false);
+      await musicEngine.init(analysis, newOverrides);
+      if (wasPlaying) {
+        musicEngine.play();
+        setIsPlaying(true);
+      }
+    }, 300);
+  };
+
+  const handleResetOverrides = async () => {
+    resetOverrides();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!analysis) return;
+    const wasPlaying = musicEngine.isPlaying;
+    musicEngine.dispose();
+    setIsPlaying(false);
+    await musicEngine.init(analysis);
+    if (wasPlaying) {
+      musicEngine.play();
+      setIsPlaying(true);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className={styles.page}>
-        <div className={styles.loadingWrap}>
-          <div className={styles.spinner} />
-          <p>
-            Loading {owner}/{repo}…
-          </p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-base-100">
+        <span className="loading loading-spinner loading-lg text-primary" />
+        <p className="text-base-content/60">
+          Loading {owner}/{repo}…
+        </p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className={styles.page}>
-        <div className={styles.errorWrap}>
-          <p>{loadError}</p>
-          <button className={styles.backBtn} onClick={() => navigate("/")}>
-            ← Back
+      <div className="min-h-screen flex items-center justify-center bg-base-100 p-6">
+        <div className="max-w-md w-full flex flex-col gap-4">
+          <div className="alert alert-error">
+            <span>{loadError}</span>
+          </div>
+          <button className="btn btn-ghost" onClick={() => navigate("/")}>
+            ← Back to home
           </button>
         </div>
       </div>
     );
   }
 
+  if (!analysis) return null;
+
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => navigate("/")}>
-          ← Back
-        </button>
-        <h1 className={styles.repoTitle}>
-          {owner}/{repo}
-        </h1>
-        {analysis && <span className={styles.commitCount}>{analysis.totalCommits} commits</span>}
-      </header>
-
-      <main className={styles.main}>
-        <div className={styles.styleRow}>
-          {(["dnd", "scifi", "horror"] as Style[]).map((s) => (
-            <button
-              key={s}
-              className={`${styles.styleBtn} ${currentStyle === s ? styles.styleBtnActive : ""}`}
-              onClick={() => handleStyleChange(s)}
-            >
-              {STYLE_LABELS[s]}
-            </button>
-          ))}
-        </div>
-
-        <div className={styles.player}>
-          <button
-            className={styles.playBtn}
-            onClick={handlePlayPause}
-            disabled={!analysis}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? "⏸" : "▶"}
-          </button>
-          <div className={styles.volumeRow}>
-            <span className={styles.volIcon}>🔊</span>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={handleVolumeChange}
-              className={styles.volumeSlider}
-              aria-label="Volume"
-            />
-          </div>
-        </div>
-
-        {analysis && (
-          <div className={styles.stats}>
-            {[
-              { label: "BPM", value: analysis.music.bpm },
-              { label: "Voices", value: analysis.music.voices },
-              { label: "Mode", value: analysis.music.mode },
-              { label: "Energy", value: `${Math.round(analysis.music.energy * 100)}%` },
-              { label: "Complexity", value: `${Math.round(analysis.music.complexity * 100)}%` },
-              { label: "Authors", value: analysis.authorCount },
-            ].map(({ label, value }) => (
-              <div key={label} className={styles.stat}>
-                <span className={styles.statLabel}>{label}</span>
-                <span className={styles.statValue}>{value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+    <PlayerTemplate
+      owner={owner!}
+      repo={repo!}
+      analysis={analysis}
+      commits={commits}
+      isPlaying={isPlaying}
+      volume={volume}
+      overrides={overrides}
+      onPlayPause={handlePlayPause}
+      onVolumeChange={handleVolumeChange}
+      onOverrideChange={handleOverrideChange}
+      onResetOverrides={handleResetOverrides}
+      onBack={() => navigate("/")}
+    />
   );
 }

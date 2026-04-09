@@ -1,6 +1,5 @@
 import { POPULAR_REPOS } from "@/lib/github";
 import { RepoCard } from "@/components/molecules";
-import * as styles from "./PopularReposGrid.css";
 
 interface PopularReposGridProps {
   onSelect: (owner: string, repo: string) => void;
@@ -8,9 +7,11 @@ interface PopularReposGridProps {
 
 export function PopularReposGrid({ onSelect }: PopularReposGridProps) {
   return (
-    <section className={styles.section}>
-      <h3 className={styles.title}>Legendary Repositories</h3>
-      <div className={styles.grid}>
+    <section className="flex flex-col gap-4">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-base-content/50">
+        Popular Repositories
+      </h3>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {POPULAR_REPOS.map((repo) => (
           <RepoCard key={`${repo.owner}/${repo.repo}`} repo={repo} onSelect={onSelect} />
         ))}
