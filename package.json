@@ -15,8 +15,8 @@
     "build": "vp build",
     "preview": "vp preview",
     "prepare": "vp config",
-    "test": "vp test",
-    "test:coverage": "vp test run --coverage",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage",
     "knip": "knip",
     "jscpd": "jscpd"
   },
@@ -38,6 +38,7 @@
     "jscpd": "^4",
     "knip": "^5",
     "typescript": "^5.6.0",
+    "vitest": "^3.1.2",
     "vite": "^8",
     "vite-plus": "0.1.15"
   }
