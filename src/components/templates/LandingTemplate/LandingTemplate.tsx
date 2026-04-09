@@ -1,5 +1,5 @@
-import { LandingHeader, PopularReposGrid, RepoInputBar, Particles } from "@/components/organisms";
-import * as styles from "./LandingTemplate.css";
+import { LandingHeader, PopularReposGrid, RepoInputBar } from "@/components/organisms";
+import { ThemeToggle } from "@/components/organisms/ThemeToggle/ThemeToggle";
 
 interface LandingTemplateProps {
   error: string | null;
@@ -9,29 +9,29 @@ interface LandingTemplateProps {
 
 export function LandingTemplate({ error, onSubmit, onRepoSelect }: LandingTemplateProps) {
   return (
-    <div className={styles.page}>
-      <div className={styles.bg}>
-        <Particles count={35} />
+    <div className="min-h-screen flex flex-col bg-base-100">
+      <div className="absolute top-4 right-4 z-10">
+        <ThemeToggle />
       </div>
-      <div className={styles.content}>
+      <div className="flex flex-col flex-1">
         <LandingHeader />
-        <main className={styles.main}>
+        <main className="max-w-4xl mx-auto px-6 pb-12 w-full">
           <RepoInputBar error={error} onSubmit={onSubmit} />
           <PopularReposGrid onSelect={onRepoSelect} />
         </main>
-        <footer className={styles.footer}>
-          <p>No backend. No tracking. All magic happens in your browser.</p>
-          <div className={styles.footerLinks}>
+        <footer className="mt-auto p-6 text-center text-base-content/40 text-sm border-t border-base-300">
+          <p>No backend. No tracking. All music happens in your browser.</p>
+          <div className="flex items-center justify-center gap-3 mt-2">
             <a
               href="https://github.com/YogliB/gitquest"
               target="_blank"
               rel="noopener noreferrer"
-              className={styles.footerLink}
+              className="hover:text-primary transition-colors"
             >
               github repository
             </a>
-            <span>|</span>
-            <span>Released under the MIT License</span>
+            <span>·</span>
+            <span>MIT License</span>
           </div>
         </footer>
       </div>

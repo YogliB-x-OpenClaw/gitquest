@@ -1,17 +1,29 @@
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import { useStore } from "./store";
-import "./styles/global.css.ts";
-import "./styles/themes/dnd.css.ts";
-import "./styles/themes/scifi.css.ts";
-import "./styles/themes/horror.css.ts";
+import "./styles/global.css";
 
 export function App() {
-  const currentStyle = useStore((s) => s.currentStyle);
+  const colorTheme = useStore((s) => s.colorTheme);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", currentStyle);
-  }, [currentStyle]);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const apply = () => {
+      const isDark = colorTheme === "dark" || (colorTheme === "system" && mq.matches);
+      document.documentElement.setAttribute(
+        "data-theme",
+        isDark ? "gitquest-dark" : "gitquest-light",
+      );
+    };
+
+    apply();
+
+    if (colorTheme === "system") {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+  }, [colorTheme]);
 
   return <Outlet />;
 }

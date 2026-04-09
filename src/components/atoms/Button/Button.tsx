@@ -1,6 +1,12 @@
-import * as styles from "./Button.css";
+type Variant = "primary" | "secondary" | "ghost" | "icon-only" | "back";
 
-type Variant = "primary" | "secondary" | "ghost" | "icon-only" | "back" | "style-select";
+const VARIANT_CLASSES: Record<Variant, string> = {
+  primary: "btn btn-primary",
+  secondary: "btn btn-secondary",
+  ghost: "btn btn-ghost",
+  "icon-only": "btn btn-ghost btn-square",
+  back: "btn btn-ghost btn-sm",
+};
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -8,7 +14,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 export function Button({ variant = "primary", className = "", children, ...props }: ButtonProps) {
   return (
-    <button className={`${styles.base} ${styles.variants[variant]} ${className}`} {...props}>
+    <button className={`${VARIANT_CLASSES[variant]} ${className}`} {...props}>
       {children}
     </button>
   );

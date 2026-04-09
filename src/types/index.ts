@@ -1,4 +1,14 @@
-export type Style = "dnd" | "scifi" | "horror";
+export type ColorTheme = "light" | "dark" | "system";
+
+export type Scale = "major" | "minor" | "dorian" | "phrygian" | "diminished" | "pentatonic";
+
+export interface MusicOverrides {
+  bpm?: number; // 40–200
+  scale?: Scale;
+  reverb?: number; // 0–1
+  voices?: number; // 1–4
+  energy?: number; // 0–1
+}
 
 export interface Commit {
   sha: string;
@@ -21,7 +31,7 @@ export interface Commit {
 export interface MusicParams {
   bpm: number;
   voices: number;
-  mode: "major" | "minor";
+  scale: Scale;
   complexity: number;
   energy: number;
 }
@@ -39,11 +49,14 @@ export interface Analysis {
   daySpan: number;
   hashSeed: number;
   music: MusicParams;
+  bpmReason: string;
+  scaleReason: string;
+  energyReason: string;
 }
 
 export interface Settings {
   githubToken: string;
-  lastStyle: Style;
+  colorTheme: ColorTheme;
   volume: number;
 }
 

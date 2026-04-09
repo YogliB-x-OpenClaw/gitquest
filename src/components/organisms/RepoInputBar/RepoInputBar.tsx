@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/atoms";
-import * as styles from "./RepoInputBar.css";
 
 interface RepoInputBarProps {
   error: string | null;
@@ -16,13 +14,19 @@ export function RepoInputBar({ error, onSubmit, defaultValue = "" }: RepoInputBa
   };
 
   return (
-    <section className={styles.section}>
-      <h2 className={styles.title}>Choose Your Repository</h2>
-      <p className={styles.subtitle}>Enter a GitHub URL or pick a legendary codebase below</p>
-      <div className={styles.inputWrap}>
-        <span className={styles.prefix}>github.com/</span>
+    <section className="flex flex-col gap-3 mb-10">
+      <div>
+        <h2 className="text-xl font-semibold text-base-content">Listen to a Repository</h2>
+        <p className="text-base-content/50 text-sm mt-0.5">
+          Enter a GitHub URL or choose a popular repo below
+        </p>
+      </div>
+      <div className="join w-full shadow-sm">
+        <span className="join-item flex items-center px-3 bg-base-200 border border-base-300 text-base-content/50 text-sm select-none border-r-0">
+          github.com/
+        </span>
         <input
-          className={styles.input}
+          className="join-item input input-bordered flex-1 focus:outline-none focus:border-primary text-sm"
           type="text"
           placeholder="facebook/react"
           autoComplete="off"
@@ -33,15 +37,19 @@ export function RepoInputBar({ error, onSubmit, defaultValue = "" }: RepoInputBa
             if (e.key === "Enter") handleSubmit();
           }}
         />
-        <Button
-          variant="primary"
+        <button
+          className="join-item btn btn-primary"
           onClick={handleSubmit}
-          style={{ margin: "6px", borderRadius: "10px" }}
+          disabled={!value.trim()}
         >
-          <span>⚔</span> Begin Quest
-        </Button>
+          Generate Music
+        </button>
       </div>
-      {error && <div className={styles.error}>{error}</div>}
+      {error && (
+        <div className="alert alert-error py-2 text-sm">
+          <span>{error}</span>
+        </div>
+      )}
     </section>
   );
 }
