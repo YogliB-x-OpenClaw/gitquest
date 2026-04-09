@@ -4,13 +4,13 @@
   "description": "Transform any GitHub repository into a text adventure RPG",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview"
   },
   "keywords": ["git", "game", "rpg", "text-adventure"],
   "license": "MIT",
-  "dependencies": {
+"dependencies": {
     "@vanilla-extract/css": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -22,8 +22,10 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vanilla-extract/vite-plugin": "^5.2.2",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.0.0",
+    "@voidzero-dev/vite-plus-core": "latest",
     "typescript": "^5.6.0",
-    "vite": "^6.0.0"
+    "vite": "^8",
+    "vite-plus": "0.1.15"
   }
 }
