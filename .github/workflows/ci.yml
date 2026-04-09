@@ -26,6 +26,9 @@ jobs:
       - name: VP Check
         run: npx vp check
 
+      - name: Knip
+        run: npm run knip
+
   build:
     runs-on: ubuntu-latest
     steps:

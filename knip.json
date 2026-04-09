@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/knip/schema.json",
+  "ignoreDependencies": ["@voidzero-dev/vite-plus-core"],
+  "ignore": [
+    "src/components/atoms/Badge/**",
+    "src/components/atoms/Input/**",
+    "src/components/atoms/ProgressBar/**"
+  ]
+}

@@ -5,7 +5,7 @@ const GITHUB_API = "https://api.github.com";
 
 let rateLimit: RateLimitStatus = { remaining: null, reset: null };
 
-export function getRateLimitStatus(): RateLimitStatus {
+function getRateLimitStatus(): RateLimitStatus {
   return { ...rateLimit };
 }
 
@@ -101,7 +101,7 @@ export function parseRepoInput(input: string): { owner: string; repo: string } |
   return null;
 }
 
-export async function fetchRepoInfo(owner: string, repo: string, token: string | null = null) {
+async function fetchRepoInfo(owner: string, repo: string, token: string | null = null) {
   const cacheKey = `repo:${owner}/${repo}`;
   const cached = storage.getCache(cacheKey);
   if (cached) return cached;
