@@ -28,7 +28,7 @@ interface StyleConfig {
   octaveRange: [number, number];
 }
 
-export const STYLE_CONFIGS: Record<Style, StyleConfig> = {
+const STYLE_CONFIGS: Record<Style, StyleConfig> = {
   dnd: {
     loadingIcon: "⚔",
     loadingTitle: "Summoning the Chronicles...",
