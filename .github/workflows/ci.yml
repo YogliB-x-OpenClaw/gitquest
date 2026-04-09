@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: JSCPD
+      - name: Check for duplicate code
         run: npm run jscpd
 
   build:
