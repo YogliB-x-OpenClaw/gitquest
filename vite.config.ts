@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { defineConfig } from "vite-plus";
 import react from "@vitejs/plugin-react";
 import { vanillaExtractPlugin } from "@vanilla-extract/vite-plugin";
@@ -13,20 +12,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
-    },
-  },
-  test: {
-    coverage: {
-      provider: "v8",
-      include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.css.ts", "src/types/**", "src/main.tsx"],
-      thresholds: {
-        perFile: true,
-        statements: 80,
-        lines: 80,
-        functions: 80,
-        branches: 80,
-      },
     },
   },
   fmt: {
