@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: VP Check
+        run: npx vp check
+
       - name: Build
         run: npm run build
 
