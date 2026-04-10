@@ -24,6 +24,7 @@ Transform any GitHub repository's commit history into generative algorithmic mus
 | Styling | Tailwind CSS v4, DaisyUI v5 |
 | Build | Vite 8, vite-plus |
 | Testing | Vitest 3, V8 coverage |
+| Component Explorer | Storybook 10 |
 
 ## Getting Started
 
@@ -47,6 +48,8 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 | `npm run test:coverage` | Run tests with V8 coverage (80% threshold) |
 | `npm run knip` | Detect unused exports and dependencies |
 | `npm run jscpd` | Detect duplicated code blocks |
+| `npm run storybook` | Start Storybook dev server at port 6006 |
+| `npm run build-storybook` | Build static Storybook to `storybook-static/` |
 
 ## How It Works
 
