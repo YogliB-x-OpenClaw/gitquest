@@ -1,8 +1,8 @@
-# CLAUDE.md — GitQuest
+# CLAUDE.md — GitSound (GitQuest)
 
 ## Project Overview
 
-**GitQuest** is a browser-based single-page application that transforms any GitHub repository's commit history into an immersive text adventure RPG. Users enter a GitHub repo URL, pick a narrative style (D&D fantasy, sci-fi, or horror), and experience the repo's history as an interactive story where commits become quests, bug fixes are battles, and contributors are heroes.
+**GitSound** (package name: `gitquest`) is a browser-based single-page application that transforms any GitHub repository's commit history into generative algorithmic music. Users enter a GitHub repo URL and hear their project as a unique soundscape — commit patterns, bug-fix ratios, and contributor activity drive BPM, scale, voices, and energy of the Tone.js synthesis engine. Users can also tune the music manually via override controls.
 
 **Live deployment**: GitHub Pages (auto-deployed from `main` via `.github/workflows/deploy.yml`).
 
@@ -12,44 +12,39 @@
 
 ```
 gitquest/
-├── index.html                     # HTML entry; preloads fonts, applies theme before React mounts
+├── index.html                     # HTML entry; preloads fonts, applies color theme before React mounts
 ├── src/
 │   ├── main.tsx                   # React DOM entry point
 │   ├── App.tsx                    # Root component; manages data-theme attribute on <html>
-│   ├── router.tsx                 # Hash-based React Router with 3 routes
+│   ├── router.tsx                 # Hash-based React Router with 2 routes
 │   ├── types/
 │   │   └── index.ts               # All TypeScript interfaces and type aliases
 │   ├── lib/                       # Core business logic (framework-agnostic singletons)
 │   │   ├── github.ts              # GitHub API integration, caching, rate-limit handling
-│   │   ├── story-engine.ts        # Game state machine, commit-to-scene logic
-│   │   ├── ai-engine.ts           # AI narrative generation (local WebLLM or remote API)
 │   │   ├── music-engine.ts        # Deterministic algorithmic music via Tone.js
-│   │   └── storage.ts             # LocalStorage abstraction (saves, settings, cache)
+│   │   └── storage.ts             # LocalStorage abstraction (settings, history, cache)
 │   ├── store/                     # Zustand state management
 │   │   ├── index.ts               # Combined store (useStore hook)
-│   │   ├── appSlice.ts            # currentStyle, urlError
-│   │   ├── gameSlice.ts           # gameState, commits, analysis, isGenerating
-│   │   ├── settingsSlice.ts       # AI config, GitHub token, rateLimit (persisted)
+│   │   ├── repoSlice.ts           # commits, analysis, overrides, urlError, isLoading, loadError
+│   │   ├── settingsSlice.ts       # githubToken, colorTheme, rateLimit (persisted)
 │   │   └── musicSlice.ts          # isPlaying, volume, musicStarted
-│   ├── components/                # Atomic design hierarchy
-│   │   ├── atoms/                 # Button, Input, ProgressBar, StatBar, Badge
-│   │   ├── molecules/             # ChoiceButton, ChoicesPanel, CommitLore, HeroStats, RepoCard, SaveSlot, StyleCard
-│   │   ├── organisms/             # AISettingsModal, GameHeader, GameMenuModal, GameSidebar, LandingHeader, Particles, PopularReposGrid, RepoInputBar, StoryPanel, StyleSelector
-│   │   ├── templates/             # GameTemplate, LandingTemplate, LoadingTemplate, StyleTemplate
-│   │   └── pages/                 # GamePage, LandingPage, StylePage
-│   └── styles/                    # Vanilla Extract CSS-in-JS
-│       ├── contract.css.ts        # Design token contract (vars)
-│       ├── global.css.ts          # Global resets and defaults
-│       ├── animations.css.ts      # Shared + style-specific keyframe animations
-│       └── themes/
-│           ├── dnd.css.ts         # D&D fantasy theme
-│           ├── scifi.css.ts       # Sci-fi cyberpunk theme
-│           └── horror.css.ts      # Psychological horror theme
+│   ├── components/                # Atomic design hierarchy (no atoms level)
+│   │   ├── molecules/             # RepoCard
+│   │   ├── organisms/             # CommitFeed, FromYourCodePanel, LandingHeader,
+│   │   │                          #   PlaybackControls, PlayerHeader, PopularReposGrid,
+│   │   │                          #   RepoInputBar, ThemeToggle, TuneMusicPanel, WaveformViz
+│   │   ├── templates/             # LandingTemplate, PlayerTemplate
+│   │   └── pages/                 # LandingPage, PlayerPage
+│   └── styles/
+│       └── global.css             # Tailwind v4 import, DaisyUI plugin, two custom themes, global resets
 ├── package.json                   # Dependencies and scripts
 ├── tsconfig.json                  # TypeScript config; path alias @/* → src/*
-├── vite.config.ts                 # Vite build config; base path /gitquest/
+├── vite.config.ts                 # Vite build config; base path /gitquest/, staged hook
+├── vitest.config.ts               # Vitest config; V8 coverage, 80% thresholds
+├── knip.json                      # Knip config for unused export detection
+├── oxlint.config.ts               # oxlint config (used by vp check)
 └── .github/workflows/
-    ├── ci.yml                     # Type-check + build on PRs and main pushes
+    ├── ci.yml                     # vp check, knip, jscpd, coverage, build on PRs and main
     └── deploy.yml                 # Build and deploy to GitHub Pages on main push
 ```
 
@@ -60,10 +55,12 @@ gitquest/
 - **React 18** + **TypeScript 5.6** — UI framework with full type safety
 - **React Router DOM 6** — Hash-based routing (`createHashRouter`) for GitHub Pages compatibility
 - **Zustand 5** — Lightweight slice-based state management
-- **Vanilla Extract 1.16** — Zero-runtime CSS-in-JS with design token contracts (`.css.ts` files)
+- **Tailwind CSS v4** + **DaisyUI v5** — Utility-first CSS with component layer; two custom OkLch themes
 - **Tone.js 14.8.49** — Browser audio synthesis (npm dependency)
-- **Vite 8** + **vite-plus** — Build tooling; `vp` CLI wraps Vite with pre-commit hooks
-- **WebLLM** — Optional in-browser LLM inference (dynamic import from `esm.run` at runtime)
+- **Vite 8** + **vite-plus** — Build tooling; `vp` CLI wraps Vite with formatting, staged hooks, and pre-commit checks
+- **Vitest 3** — Unit test runner; V8 coverage provider with 80% per-file thresholds
+- **Knip 5** — Detects unused exports and dependencies
+- **jscpd** — Detects duplicate code blocks
 - **GitHub API v3** — Commit history and repo metadata
 
 There is a **build step**: `npm run build` → Vite outputs to `dist/`.
@@ -83,15 +80,27 @@ npm run preview   # preview production build
 ### Type Checking / Linting
 
 ```bash
-npx vp check       # runs TypeScript type check + any pre-commit checks
+npx vp check       # runs TypeScript type check + oxlint
 npx vp check --fix # also applies auto-fixable issues
 ```
 
-CI runs `npx vp check` and `npm run build` on every PR and push to `main`.
+Staged files automatically run `vp check --fix` on commit (configured via `staged` in `vite.config.ts`).
 
-### No Test Runner
+### Testing
 
-There are no configured test runners (Jest, Vitest). Do not add test infrastructure unless explicitly requested.
+```bash
+npm test              # run all tests (vitest)
+npm run test:coverage # run with V8 coverage; requires 80% statements/lines/functions/branches per file
+```
+
+Vitest excludes `*.css.ts`, `src/types/**`, and `src/main.tsx` from coverage. Test files should be colocated or in a `__tests__/` sibling.
+
+### Code Quality
+
+```bash
+npm run knip   # find unused exports and dependencies
+npm run jscpd  # find duplicated code blocks
+```
 
 ### Deployment
 
@@ -99,40 +108,52 @@ Push to `main` → GitHub Actions builds with Vite and deploys to GitHub Pages w
 
 ---
 
+## CI Pipeline (`ci.yml`)
+
+Five parallel/sequential jobs on every PR and push to `main`:
+
+| Job       | Command                  | Purpose                              |
+| --------- | ------------------------ | ------------------------------------ |
+| `check`   | `npx vp check`           | TypeScript + oxlint                  |
+| `knip`    | `npm run knip`           | Unused exports/dependencies          |
+| `dedup`   | `npm run jscpd`          | Duplicate code detection             |
+| `coverage`| `npm run test:coverage`  | Unit tests with 80% coverage gate    |
+| `build`   | `npm run build`          | Vite production build validation     |
+
+`knip` depends on `check` completing first. All jobs use Node 22.
+
+---
+
 ## Architecture & Data Flow
 
 ```
-User Input (repo URL + style)
+User Input (repo URL)
        ↓
-LandingPage / StylePage  →  navigate to /:owner/:repo/:style
+LandingPage  →  navigate to /:owner/:repo
        ↓
-GamePage initialization
+PlayerPage initialization
   ├─ fetchCommits() → github.ts → localStorage cache
-  ├─ analyzeCommits() → Analysis + MusicParams
-  ├─ musicEngine.start() → Tone.js procedural synthesis
-  └─ storyEngine.startGame() → initial GameState
+  ├─ analyzeCommits() → Analysis (including MusicParams)
+  └─ musicEngine.init(analysis, overrides) → Tone.js synthesis setup
        ↓
-Game Loop:
-  StoryPanel renders currentScene
-  ├─ Player clicks choice
-  ├─ storyEngine.makeChoice()
-  │   ├─ applyChoiceConsequences() → HP/XP/inventory/questLog
-  │   ├─ commitIndex++, chapter = floor(commitIndex / 10) + 1
-  │   └─ aiEngine.generateScene() or generateFallbackScene()
-  ├─ Zustand store updated → React re-render
-  └─ Repeat until last commit → generateEpilogue()
+Player UI:
+  PlaybackControls → musicEngine.play() / .pause()
+  TuneMusicPanel  → user edits MusicOverrides → musicEngine.init(analysis, overrides)
+  WaveformViz     → animated visualization while playing
+  CommitFeed      → scrollable list of commits
+  FromYourCodePanel → displays bpmReason, scaleReason, energyReason
 ```
 
 ### Key Patterns
 
 | Pattern                | Usage                                                                                                     |
 | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Singleton exports**  | `lib/` modules export a single instance (`export const storyEngine = new StoryEngine()`)                 |
-| **Zustand slices**     | Store composed from 4 slices; components select with `useStore(s => s.field)`                            |
-| **Atomic design**      | `atoms → molecules → organisms → templates → pages` with barrel `index.ts` at each level                 |
-| **Hash routing**       | `/#/:owner/:repo/:style` — required for static hosting on GitHub Pages                                   |
-| **Theme via attribute** | `data-theme="dnd|scifi|horror"` set on `<html>` by `App.tsx`; early script in `index.html` prevents flash |
-| **Vanilla Extract**    | Each component has a sibling `.css.ts` file; design tokens via `vars` from `contract.css.ts`             |
+| **Singleton exports**  | `lib/` modules export a single instance (`export const musicEngine = new MusicEngine()`)                 |
+| **Zustand slices**     | Store composed from 3 slices; components select with `useStore(s => s.field)`                            |
+| **Atomic design**      | `molecules → organisms → templates → pages` with barrel `index.ts` at each level (no atoms level)       |
+| **Hash routing**       | `/#/:owner/:repo` — required for static hosting on GitHub Pages                                          |
+| **Theme via attribute** | `data-theme="gitquest-light|gitquest-dark"` set on `<html>` by `App.tsx`; early script in `index.html` prevents flash |
+| **Tailwind + DaisyUI** | Utility classes in JSX; DaisyUI components (btn, input, badge, etc.) for consistent UI primitives       |
 | **Custom event**       | `github-ratelimit-update` dispatched on `window` when rate-limit headers update                          |
 
 ---
@@ -141,31 +162,57 @@ Game Loop:
 
 ### Naming
 
-- React components: `PascalCase` (e.g., `ChoiceButton`, `GamePage`)
-- Component files: match component name (`ChoiceButton.tsx`, `ChoiceButton.css.ts`)
+- React components: `PascalCase` (e.g., `RepoCard`, `PlayerPage`)
+- Component files: match component name (`RepoCard.tsx`)
 - Variables and functions: `camelCase`
-- Constants: `SCREAMING_SNAKE_CASE` (e.g., `GITHUB_API`, `STYLE_CONFIGS`, `SYSTEM_PROMPTS`)
+- Constants: `SCREAMING_SNAKE_CASE` (e.g., `GITHUB_API`, `POPULAR_REPOS`, `ENGINE_CONFIG`)
 - HTML ids and CSS classes: `kebab-case`
-- File names: `kebab-case.ts` / `PascalCase.tsx` / `PascalCase.css.ts`
+- File names: `kebab-case.ts` / `PascalCase.tsx`
 
 ### TypeScript Style
 
 - All types defined in `src/types/index.ts`; import as `import type { Foo } from "@/types"`
 - Path alias `@/` maps to `src/` — always use it for non-relative imports
 - Comment section dividers use `─── Title ───` (em-dashes)
-- Config/mapping data lives in object literals at module top (e.g., `SYSTEM_PROMPTS`, `STYLE_CONFIGS`)
+- Config/mapping data lives in object literals at module top (e.g., `SCALES`, `ENGINE_CONFIG`, `POPULAR_REPOS`)
 - Prefer early returns over deeply nested conditionals
+- `strict: false` in `tsconfig.json` — do not enable strict mode
 
-### CSS / Vanilla Extract Style
+### CSS / Tailwind Style
 
-- Design tokens defined as a contract in `src/styles/contract.css.ts` (`vars`)
-- Theme files in `src/styles/themes/` implement all contract tokens under a `data-theme` selector
-- Component `.css.ts` files import `vars` for all design token values — never hardcode colors/fonts
-- Shared animations in `animations.css.ts`; style-specific animations go in their respective theme file
+- Use Tailwind utility classes in JSX for layout, spacing, typography
+- Use DaisyUI component classes (`btn`, `btn-primary`, `input`, `badge`, `card`, etc.) for interactive elements
+- DaisyUI semantic color tokens (`primary`, `secondary`, `accent`, `base-100`, etc.) apply automatically from the active theme — never hardcode colors
+- Global styles and custom animations only in `src/styles/global.css`
+- No component-level `.css` or `.css.ts` files — all styling via Tailwind classes in JSX
 
 ---
 
 ## Key Data Structures (`src/types/index.ts`)
+
+### `ColorTheme`
+
+```ts
+"light" | "dark" | "system"
+```
+
+### `Scale`
+
+```ts
+"major" | "minor" | "dorian" | "phrygian" | "diminished" | "pentatonic"
+```
+
+### `MusicOverrides`
+
+```ts
+{
+  bpm?: number;      // 40–200
+  scale?: Scale;
+  reverb?: number;   // 0–1
+  voices?: number;   // 1–4
+  energy?: number;   // 0–1
+}
+```
 
 ### `Commit` (from `github.ts`)
 
@@ -178,6 +225,18 @@ Game Loop:
 }
 ```
 
+### `MusicParams`
+
+```ts
+{
+  bpm: number,
+  voices: number,
+  scale: Scale,
+  complexity: number,
+  energy: number
+}
+```
+
 ### `Analysis` (from `github.ts`)
 
 ```ts
@@ -185,30 +244,10 @@ Game Loop:
   totalCommits, authors, authorCount, peakHour, avgMsgLen,
   fixRatio, featRatio, refactorRatio, commitsPerDay, daySpan,
   hashSeed,
-  music: { bpm, voices, mode: "major"|"minor", complexity, energy }
-}
-```
-
-### `Scene` (from `ai-engine.ts`)
-
-```ts
-{
-  narrative: string,
-  choices: Array<{ label: string, text: string }>,  // A/B/C
-  isEpilogue?: boolean
-}
-```
-
-### `GameState` (in `story-engine.ts`)
-
-```ts
-{
-  repo: { owner, repo }, style, commits, analysis,
-  commitIndex, chapter,
-  hp, maxHp, xp, level,
-  inventory: string[], questLog: QuestEntry[],
-  history: Array<{ narrative, choice, commitSha }>,
-  currentScene, startedAt, savedAt: number | null
+  music: MusicParams,
+  bpmReason: string,   // human-readable explanation of BPM choice
+  scaleReason: string, // human-readable explanation of scale choice
+  energyReason: string // human-readable explanation of energy level
 }
 ```
 
@@ -216,8 +255,26 @@ Game Loop:
 
 ```ts
 {
-  aiMode: "local" | "api", localModel, apiBaseUrl, apiKey, apiModel,
-  githubToken, lastStyle: Style, volume: number
+  githubToken: string,
+  colorTheme: ColorTheme,
+  volume: number
+}
+```
+
+### `PopularRepo`
+
+```ts
+{
+  owner, repo, desc, stars, lang: string
+}
+```
+
+### `RateLimitStatus`
+
+```ts
+{
+  remaining: number | null,
+  reset: number | null
 }
 ```
 
@@ -225,16 +282,15 @@ Game Loop:
 
 ## Zustand Store (`src/store/`)
 
-Single `useStore` hook composed from 4 slices:
+Single `useStore` hook composed from 3 slices:
 
-| Slice            | State fields                                                    | Key actions                                    |
-| ---------------- | --------------------------------------------------------------- | ---------------------------------------------- |
-| `appSlice`       | `currentStyle`, `urlError`                                      | `setCurrentStyle`, `setUrlError`               |
-| `gameSlice`      | `gameState`, `commits`, `analysis`, `isGenerating`              | `setGameState`, `updateGameState`, `setCommits` |
-| `settingsSlice`  | `aiMode`, `apiKey`, `apiModel`, `apiBaseUrl`, `localModel`, `githubToken`, `rateLimit` | `saveSettings`, `setRateLimit` |
-| `musicSlice`     | `isPlaying`, `volume`, `musicStarted`                           | (setters per field)                            |
+| Slice            | State fields                                                          | Key actions                                              |
+| ---------------- | --------------------------------------------------------------------- | -------------------------------------------------------- |
+| `repoSlice`      | `commits`, `analysis`, `overrides`, `urlError`, `isLoading`, `loadError` | `setCommits`, `setAnalysis`, `setOverrides`, `resetOverrides`, `setUrlError`, `setIsLoading`, `setLoadError` |
+| `settingsSlice`  | `githubToken`, `colorTheme`, `rateLimit`                              | `saveSettings`, `setColorTheme`, `setRateLimit`          |
+| `musicSlice`     | `isPlaying`, `volume`, `musicStarted`                                 | `setIsPlaying`, `setVolume`, `setMusicStarted`           |
 
-Settings slice reads initial values from `storage.getSettings()` on store creation and persists via `saveSettings`.
+Settings slice reads initial values from `storage.getSettings()` on store creation and persists via `saveSettings` / `setColorTheme`.
 
 ---
 
@@ -243,7 +299,6 @@ Settings slice reads initial values from `storage.getSettings()` on store creati
 | Key pattern                           | Contents                                          |
 | ------------------------------------- | ------------------------------------------------- |
 | `gitquest:settings`                   | Serialized `Settings` object                      |
-| `gitquest:save:<slot>`                | Serialized `GameState`                            |
 | `gitquest:history`                    | Array of recently played repos (max 20)           |
 | `gitquest:cache:<key>`                | `{ value, expires }` — keyed by `repo:owner/repo` or `commits:owner/repo:N` |
 | `gitquest:cache_index`                | Array of active cache keys (max 10; auto-evicts oldest) |
@@ -258,70 +313,74 @@ Settings slice reads initial values from `storage.getSettings()` on store creati
 - Supports a GitHub Personal Access Token (from `gitquest:settings.githubToken`) for higher limits
 - `parseRepoInput()` accepts full GitHub URLs or `owner/repo` shorthand
 - `POPULAR_REPOS` — hardcoded list of 12 notable repos for the landing page grid
-- `analyzeCommits()` computes `Analysis` including `music` params (BPM, voices, mode, complexity, energy) derived from commit patterns
-
----
-
-## AI Engine Modes (`src/lib/ai-engine.ts`)
-
-| Mode     | Description                                                         |
-| -------- | ------------------------------------------------------------------- |
-| `local`  | WebLLM (in-browser LLM, dynamic import from `esm.run`, large model download) |
-| `api`    | OpenAI-compatible REST API (Gemini, Ollama, OpenAI, etc.)           |
-| Fallback | `generateFallbackScene()` — deterministic template-based generation |
-
-- Default local model: `Phi-3-mini-4k-instruct-q4f16_1-MLC`
-- Default API endpoint: `https://api.openai.com/v1`, model `gpt-4o-mini`
-- AI requests: `temperature: 0.85`, `max_tokens: 400`
-- `parseAIResponse()` extracts narrative text and `[A]`/`[B]`/`[C]` choices via regex
-- System prompts per style defined in `SYSTEM_PROMPTS` at the top of `ai-engine.ts`
-- Fallback uses `pickClass()` to assign D&D class based on commit subject keywords
+- `analyzeCommits()` computes `Analysis` including `MusicParams` and human-readable reason strings (BPM, scale, energy)
 
 ---
 
 ## Music Engine (`src/lib/music-engine.ts`)
 
-- Fully deterministic: `SeededRNG` seeded from XOR of first 5 commit SHAs (`hashSeed`)
+The core feature of the application. Fully deterministic synthesis driven by commit analysis.
+
+- `SeededRNG` seeded from `analysis.hashSeed` (XOR of first commit SHAs) — same repo always produces the same music
 - No network calls — pure client-side synthesis via Tone.js
 - Effects chain: Reverb → Delay → Limiter → Master Volume
 - 6 musical scales: `major`, `minor`, `dorian`, `phrygian`, `diminished`, `pentatonic`
-- Synthesis layers: melody (8n), bass (4n, voices ≥ 2), pads (2n, voices ≥ 3 or horror), kick drum
+- Root note derived from `hashSeed % 12` (chromatic index into C…B)
 
-`STYLE_CONFIGS` (exported) drives per-theme audio behavior:
+### Synthesis layers (controlled by `voices` parameter):
 
-| Style   | Primary synth | Tempo mult | Scale preference          | Reverb wet |
-| ------- | ------------- | ---------- | ------------------------- | ---------- |
-| `dnd`   | pluck         | 0.9×       | major, minor, dorian      | 0.5        |
-| `scifi` | synth         | 1.1×       | dorian, phrygian, minor   | 0.3        |
-| `horror`| am            | 0.7×       | diminished, phrygian, minor | 0.8      |
+| Voices | Layer added                           | Synth type      |
+| ------ | ------------------------------------- | --------------- |
+| ≥ 1    | Melody (16-step sequence, `8n`)       | `Tone.Synth` (triangle oscillator) |
+| ≥ 2    | Bass line (8-step pattern, `4n`)      | `Tone.FMSynth`  |
+| ≥ 3    | Pad chords (8-chord sequence, `2n`)   | `Tone.PolySynth` (sine oscillator) |
+| ≥ 4    | Kick drum (16-step rhythm, `8n`)      | `Tone.MembraneSynth` |
+
+### Public API:
+
+```ts
+musicEngine.init(analysis, overrides?)  // build synthesis graph; call when repo loads or overrides change
+musicEngine.play()                      // async; starts Tone.js transport
+musicEngine.pause()                     // pauses transport
+musicEngine.toggle()                    // play/pause; returns new isPlaying state
+musicEngine.setVolume(0–1)              // updates master volume live
+musicEngine.dispose()                   // tear down all nodes; called before re-init
+```
+
+`MusicOverrides` (from `repoSlice.overrides`) let users tune BPM, scale, reverb, voices, and energy on top of the computed defaults.
 
 ---
 
 ## Theme System
 
-Three visual themes applied via `data-theme` attribute on `<html>`. Each has a `.css.ts` theme file implementing the `vars` contract and a matching AI personality in `SYSTEM_PROMPTS`.
+Two visual themes applied via `data-theme` attribute on `<html>`. Both use OkLch color space via DaisyUI's theme plugin.
 
-| `data-theme` | Tone                               | Key fonts                   |
-| ------------ | ---------------------------------- | --------------------------- |
-| `dnd`        | Medieval fantasy, parchment colors | Cinzel, MedievalSharp       |
-| `scifi`      | Cyberpunk neon, tech UI            | Orbitron, Share Tech Mono   |
-| `horror`     | Dark, atmospheric, unsettling      | Creepster, Special Elite    |
+| `data-theme`    | Appearance          | DaisyUI theme name  |
+| --------------- | ------------------- | ------------------- |
+| `gitquest-light` | Light purple/violet | `gitquest-light`   |
+| `gitquest-dark`  | Dark purple/violet  | `gitquest-dark`    |
 
-`index.html` includes an inline script that reads `gitquest:settings.lastStyle` from localStorage and sets `data-theme` before React mounts, preventing a flash of unstyled content.
+- `colorTheme` setting: `"light"` | `"dark"` | `"system"` — `"system"` follows `prefers-color-scheme`
+- `App.tsx` subscribes to `colorTheme` and system media query to apply the correct `data-theme`
+- `index.html` includes an inline script that reads `gitquest:settings.colorTheme` from localStorage and sets `data-theme` before React mounts, preventing a flash of unstyled content
+- `ThemeToggle` organism handles UI for switching between light/dark/system
+
+### Fonts
+
+- **Body**: Inter (400, 500, 600, 700)
+- **Monospace**: JetBrains Mono (400, 500) — applied via `.font-mono` / `.mono` / `code` selectors
+- Both loaded via Google Fonts in `index.html`
 
 ---
 
-## Game Mechanics
+## Routing (`src/router.tsx`)
 
-- **Levels**: 10 levels with XP thresholds `[0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200]`
-- **XP gain**: 20–50 per choice
-- **Level-up**: `maxHp += 10`, `hp = min(hp + 20, maxHp)`, quest log entry added
-- **HP effects**: bug-fix commits cause HP changes based on choice label (A: -10, C: +5)
-- **Inventory**: feature commits have 40% chance to drop a themed item; max 8 items
-- **Quest log**: max 10 entries; significant commit keywords trigger auto-entries
-- **Chapters**: 1 chapter per 10 commits (`chapter = floor(commitIndex / 10) + 1`)
-- **Choice shuffle**: choices are Fisher-Yates shuffled after AI generation to prevent pattern recognition
-- **Epilogue**: triggered when `commitIndex >= commits.length - 1` and `history.length > 1`
+Hash-based router required for GitHub Pages static hosting:
+
+| Path             | Component      | Purpose                                  |
+| ---------------- | -------------- | ---------------------------------------- |
+| `/`              | `LandingPage`  | Repo URL input + popular repos grid      |
+| `/:owner/:repo`  | `PlayerPage`   | Music player for the specified repo      |
 
 ---
 
@@ -363,7 +422,7 @@ Closes #
 <!-- Describe how you tested this change. Include steps to reproduce. -->
 
 - [ ] Tested locally with `npm run dev`
-- [ ] Verified theme switching works (D&D, sci-fi, horror)
+- [ ] Verified light/dark theme switching works
 - [ ] Tested with different GitHub repos
 - [ ] Tested on desktop and mobile (if UI changes)
 
@@ -393,9 +452,12 @@ Closes #
 - Do not revert to vanilla JS — the codebase is React + TypeScript
 - Do not introduce a different bundler (webpack, rollup) — use Vite/vite-plus as configured
 - Do not add a different state management library — Zustand is the standard here
-- Do not use plain `.css` files for new component styles — use Vanilla Extract `.css.ts`
-- Do not hardcode colors or fonts in `.css.ts` files — always use `vars` from `contract.css.ts`
-- Do not add test or lint configuration unless explicitly asked
+- Do not use plain `.css` files for component styles — use Tailwind utility classes in JSX
+- Do not use Vanilla Extract — it has been removed; use Tailwind + DaisyUI
+- Do not hardcode colors — use DaisyUI semantic tokens (`primary`, `base-100`, etc.)
 - Do not add error handling for impossible scenarios — trust browser API guarantees
 - Do not abstract one-off logic into shared utilities
 - Do not add comments to code that is already self-evident
+- Do not add an atoms component level — the hierarchy starts at molecules
+- Do not add AI/LLM narrative generation — this is a music app, not an RPG
+- Do not add game state, game mechanics, or story engine logic — those do not exist in this codebase
